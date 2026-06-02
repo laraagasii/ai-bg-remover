@@ -8,14 +8,14 @@ import io
 st.set_page_config(
     page_title="AI Background Remover",
     page_icon="✂️",
-    layout="centered" # Membuat tampilan fokus di tengah (bagus untuk single-function app)
+    layout="centered"
 )
 
 # ==========================================
 # 2. HEADER APLIKASI
 # ==========================================
 st.title("✂️ AI Background Remover")
-st.write("Aplikasi segmentasi citra otomatis berbasis Deep Learning (U2-Net) untuk menghapus latar belakang gambar secara instan.")
+st.write("Aplikasi segmentasi citra otomatis berbasis Deep Learning untuk menghapus latar belakang gambar secara instan.")
 st.write("---")
 
 # ==========================================
@@ -27,51 +27,50 @@ file_diupload = st.file_uploader(
 )
 
 # ==========================================
-# 4. PROSES INTI (JALAN JIKA ADA GAMBAR)
+# 4. PROSES INTI
 # ==========================================
 if file_diupload is not None:
-    st.write("") # Kasih space sedikit
+    st.write("") 
     
-    # Buat 2 kolom berdampingan untuk komparasi Before vs After
     kolom1, kolom2 = st.columns(2)
-    
-    # Buka gambar yang diunggah
     gambar_asli = Image.open(file_diupload)
     
-    # Kolom Kiri: Tampilkan Gambar Asli
     with kolom1:
         st.subheader("📷 Gambar Asli")
         st.image(gambar_asli, use_container_width=True)
         
-    # Kolom Kanan: Proses AI & Tampilkan Hasil
     with kolom2:
         st.subheader("✨ Hasil Segmentasi")
         
-        # Animasi loading saat model AI bekerja
-        with st.spinner("AI sedang memotong background..."):
+        with st.spinner("AI sedang memotong background... (Proses pertama mungkin memakan waktu 1-2 menit)"):
             try:
-                # Import fungsi rembg di sini agar load aplikasi awal super cepat
                 from rembg import remove
                 
-                # Eksekusi pemotongan background
-                gambar_hasil = remove(gambar_asli)
+                # OPTIMASI RAM: Jika gambar terlalu besar, kecilkan sementara untuk proses AI
+                # Ini rahasia agar server Streamlit Cloud tidak crash (OOM)
+                max_size = 1200
+                if max(gambar_asli.size) > max_size:
+                    gambar_proses = gambar_asli.copy()
+                    gambar_proses.thumbnail((max_size, max_size))
+                else:
+                    gambar_proses = gambar_asli
                 
-                # Tampilkan hasil potongan transparan (.png)
+                # Eksekusi pemotongan menggunakan gambar yang sudah dioptimasi ukurannya
+                gambar_hasil = remove(gambar_proses)
+                
                 st.image(gambar_hasil, use_container_width=True)
                 
-                # Konversi hasil ke format bytes agar bisa di-download user
                 buf = io.BytesIO()
                 gambar_hasil.save(buf, format="PNG")
                 byte_im = buf.getvalue()
                 
-                # Tombol Download Hasil
                 st.download_button(
                     label="📥 Unduh Gambar (.png)",
                     data=byte_im,
                     file_name="hasil_rembg_lara.png",
                     mime="image/png",
-                    use_container_width=True # Membuat tombol full-width biar rapi
+                    use_container_width=True
                 )
                 
             except Exception as e:
-                st.error(f"Gagal memproses gambar: {str(e)}")
+                st.error(f"Gagal memproses gambar. Silakan coba gambar dengan ukuran lebih kecil. Error: {str(e)}")
